@@ -1,0 +1,75 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-10-19T20:35:00+00:00",
+    "name": "Penpot",
+    "author": "wak@endxel.com",
+    "description": "Penpot 2.16.0 all-in-one design platform. The image bundles the frontend, backend, exporter, PostgreSQL, Redis and Mailpit; all state lives under /home/container/appdata.",
+    "features": null,
+    "docker_images": {
+        "Penpot 2.16.0 (AIO)": "ghcr.io/wakcli/penpot-pterodactyl:2.16.0-ro2"
+    },
+    "file_denylist": [],
+    "startup": "sleep infinity",
+    "config": {
+        "files": {},
+        "startup": {
+            "done": "change this part"
+        },
+        "logs": [],
+        "stop": "^C",
+        "extends": null
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/ash\nmkdir -p /mnt/server/appdata\nexit 0",
+            "container": "alpine:3.20",
+            "entrypoint": "ash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Public URL",
+            "description": "Exact URL users open in the browser. Must include scheme, host and port.",
+            "env_variable": "PENPOT_PUBLIC_URI",
+            "default_value": "http://178.63.206.185:3555",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:191",
+            "field_type": "text"
+        },
+        {
+            "name": "Features",
+            "description": "Penpot feature flags. Keep disable-secure-session-cookies while the panel serves plain HTTP.",
+            "env_variable": "PENPOT_FLAGS",
+            "default_value": "disable-email-verification enable-smtp disable-secure-session-cookies",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Enable MCP",
+            "description": "Run the bundled Penpot MCP service. Disabled to save memory.",
+            "env_variable": "PENPOT_AIO_ENABLE_MCP",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Telemetry",
+            "description": "Send anonymous Penpot telemetry.",
+            "env_variable": "PENPOT_TELEMETRY_ENABLED",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|in:true,false",
+            "field_type": "text"
+        }
+    ]
+}
