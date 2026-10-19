@@ -1,0 +1,22 @@
+#!/bin/bash
+set -euo pipefail
+source /usr/local/bin/env-helpers.sh
+load_runtime_env
+
+if ! mailpit_enabled; then
+	exec sleep infinity
+fi
+
+mkdir -p /home/container/appdata/mailpit "${MAILPIT_DIR}"
+
+exec /usr/local/bin/mailpit \
+	--database /home/container/appdata/mailpit/mailpit.db \
+	--disable-wal \
+	--disable-version-check \
+	--block-remote-css-and-fonts \
+	--smtp-disable-rdns \
+	--max "${PENPOT_AIO_MAILPIT_MAX_MESSAGES:-500}" \
+	--max-age "${PENPOT_AIO_MAILPIT_MAX_AGE:-14d}" \
+	--smtp 127.0.0.1:1025 \
+	--listen 0.0.0.0:8025 \
+	--ui-auth-file "${MAILPIT_UI_AUTH_FILE}"

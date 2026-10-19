@@ -1,0 +1,16 @@
+#!/bin/bash
+set -euo pipefail
+source /usr/local/bin/env-helpers.sh
+load_runtime_env
+
+export HOME="/home/container/appdata/home"
+export USER="container"
+export LOGNAME="container"
+export PATH="/opt/jre/bin:/opt/node/bin:/opt/imagick/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+wait_for_postgres_ready
+wait_for_redis_ready
+wait_for_mailpit_ready
+
+cd /opt/penpot/backend
+exec ./run.sh

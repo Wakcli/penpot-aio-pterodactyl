@@ -1,0 +1,97 @@
+#!/bin/bash
+set -euo pipefail
+
+export PATH="/opt/jre/bin:/opt/node/bin:/opt/imagick/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export HOME="/home/container/appdata/home"
+export USER="container"
+export LOGNAME="container"
+
+uid="$(id -u)"
+gid="$(id -g)"
+printf 'root:x:0:0:root:/root:/bin/sh\ncontainer:x:%s:%s:container:/home/container:/bin/sh\n' "$uid" "$gid" >/tmp/penpot-passwd
+printf 'root:x:0:\ncontainer:x:%s:\n' "$gid" >/tmp/penpot-group
+export NSS_WRAPPER_PASSWD=/tmp/penpot-passwd
+export NSS_WRAPPER_GROUP=/tmp/penpot-group
+export LD_PRELOAD="$(find /usr/lib -name 'libnss_wrapper.so*' | head -n 1)"
+
+mkdir -p \
+	"$HOME" \
+	/home/container/appdata/assets \
+	/home/container/appdata/config \
+	/home/container/appdata/logs/mcp \
+	/home/container/appdata/mailpit \
+	/home/container/appdata/postgres \
+	/home/container/appdata/redis \
+	/run/penpot-aio
+
+chmod 700 /home/container/appdata/postgres /home/container/appdata/redis /home/container/appdata/mailpit
+chmod 711 /home/container/appdata/config
+
+source /usr/local/bin/env-helpers.sh
+configure_runtime_env
+
+pg_bin="$(find /usr/lib/postgresql -mindepth 2 -maxdepth 2 -type d -name bin | sort | head -n 1)"
+if [[ -z ${pg_bin} ]]; then
+	echo "PostgreSQL binaries not found" >&2
+	exit 1
+fi
+
+if [[ ! -f /home/container/appdata/postgres/PG_VERSION ]]; then
+	"${pg_bin}/initdb" -D /home/container/appdata/postgres \
+		--locale=C.UTF-8 --encoding=UTF8 \
+		--auth-local=trust --auth-host=scram-sha-256
+fi
+
+"${pg_bin}/pg_ctl" -D /home/container/appdata/postgres \
+	-o "-c listen_addresses='127.0.0.1' -c unix_socket_directories='/tmp'" \
+	-w start
+
+PENPOT_INIT_DATABASE_USERNAME="${PENPOT_DATABASE_USERNAME}" \
+	PENPOT_INIT_DATABASE_PASSWORD="${PENPOT_DATABASE_PASSWORD}" \
+	PENPOT_INIT_DATABASE_NAME="${PENPOT_AIO_DATABASE_NAME}" \
+	python3 <<'PY' | psql -h /tmp -U container -d postgres -v ON_ERROR_STOP=1
+import os
+
+user = os.environ["PENPOT_INIT_DATABASE_USERNAME"]
+password = os.environ["PENPOT_INIT_DATABASE_PASSWORD"]
+dbname = os.environ["PENPOT_INIT_DATABASE_NAME"]
+
+def ident(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
+
+def literal(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+print(
+    f"""
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = {literal(user)}) THEN
+        CREATE ROLE {ident(user)} LOGIN PASSWORD {literal(password)};
+    ELSE
+        ALTER ROLE {ident(user)} WITH PASSWORD {literal(password)};
+    END IF;
+END
+$$;
+SELECT 'CREATE DATABASE {ident(dbname)} OWNER {ident(user)}'
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = {literal(dbname)})\\gexec
+"""
+)
+PY
+
+"${pg_bin}/pg_ctl" -D /home/container/appdata/postgres -m fast -w stop
+
+cat >/run/penpot-aio/redis.conf <<EOF
+bind 127.0.0.1
+protected-mode yes
+port 6379
+dir /home/container/appdata/redis
+appendonly yes
+save 60 1
+requirepass "${PENPOT_AIO_REDIS_PASSWORD}"
+maxmemory ${PENPOT_AIO_REDIS_MAXMEMORY:-256mb}
+maxmemory-policy ${PENPOT_AIO_REDIS_MAXMEMORY_POLICY:-volatile-lfu}
+EOF
+chmod 600 /run/penpot-aio/redis.conf
+
+exec /usr/bin/supervisord -c /etc/supervisor/penpot.conf

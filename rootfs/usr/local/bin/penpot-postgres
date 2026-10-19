@@ -1,0 +1,7 @@
+#!/bin/bash
+set -euo pipefail
+
+pg_bin="$(find /usr/lib/postgresql -mindepth 2 -maxdepth 2 -type d -name bin | sort | head -n 1)"
+exec "${pg_bin}/postgres" -D /home/container/appdata/postgres \
+	-c listen_addresses=127.0.0.1 \
+	-c unix_socket_directories=/tmp
