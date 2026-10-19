@@ -5,13 +5,15 @@ export PATH="/opt/jre/bin:/opt/node/bin:/opt/imagick/bin:/usr/local/sbin:/usr/lo
 export HOME="/home/container/appdata/home"
 export USER="container"
 export LOGNAME="container"
+export TMPDIR="/home/container/appdata/tmp"
 
 uid="$(id -u)"
 gid="$(id -g)"
-printf 'root:x:0:0:root:/root:/bin/sh\ncontainer:x:%s:%s:container:/home/container:/bin/sh\n' "$uid" "$gid" >/tmp/penpot-passwd
-printf 'root:x:0:\ncontainer:x:%s:\n' "$gid" >/tmp/penpot-group
-export NSS_WRAPPER_PASSWD=/tmp/penpot-passwd
-export NSS_WRAPPER_GROUP=/tmp/penpot-group
+mkdir -p /tmp/penpot
+printf 'root:x:0:0:root:/root:/bin/sh\ncontainer:x:%s:%s:container:/home/container:/bin/sh\n' "$uid" "$gid" >/tmp/penpot/passwd
+printf 'root:x:0:\ncontainer:x:%s:\n' "$gid" >/tmp/penpot/group
+export NSS_WRAPPER_PASSWD=/tmp/penpot/passwd
+export NSS_WRAPPER_GROUP=/tmp/penpot/group
 export LD_PRELOAD="$(find /usr/lib -name 'libnss_wrapper.so*' | head -n 1)"
 
 mkdir -p \
@@ -22,10 +24,16 @@ mkdir -p \
 	/home/container/appdata/mailpit \
 	/home/container/appdata/postgres \
 	/home/container/appdata/redis \
-	/run/penpot-aio
+	/home/container/appdata/tmp \
+	/tmp/penpot
 
 chmod 700 /home/container/appdata/postgres /home/container/appdata/redis /home/container/appdata/mailpit
 chmod 711 /home/container/appdata/config
+
+cp /var/www/app/js/config.js.orig /tmp/penpot/config.js
+rm -rf /tmp/penpot/overrides
+cp -a /etc/nginx/overrides /tmp/penpot/overrides
+chmod -R a+rwX /tmp/penpot/overrides
 
 source /usr/local/bin/env-helpers.sh
 configure_runtime_env
@@ -81,7 +89,7 @@ PY
 
 "${pg_bin}/pg_ctl" -D /home/container/appdata/postgres -m fast -w stop
 
-cat >/run/penpot-aio/redis.conf <<EOF
+cat >/tmp/penpot/redis.conf <<EOF
 bind 127.0.0.1
 protected-mode yes
 port 6379
@@ -92,6 +100,6 @@ requirepass "${PENPOT_AIO_REDIS_PASSWORD}"
 maxmemory ${PENPOT_AIO_REDIS_MAXMEMORY:-256mb}
 maxmemory-policy ${PENPOT_AIO_REDIS_MAXMEMORY_POLICY:-volatile-lfu}
 EOF
-chmod 600 /run/penpot-aio/redis.conf
+chmod 600 /tmp/penpot/redis.conf
 
 exec /usr/bin/supervisord -c /etc/supervisor/penpot.conf

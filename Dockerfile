@@ -9,10 +9,14 @@ RUN apt-get update \
 COPY rootfs/ /
 
 RUN chmod +x /usr/local/bin/penpot-* \
-	&& sed -i 's#/appdata#/home/container/appdata#g' /usr/local/bin/env-helpers.sh \
+	&& sed -i 's#/appdata#/home/container/appdata#g; s#/run/penpot-aio#/tmp/penpot#g' /usr/local/bin/env-helpers.sh \
 	&& sed -i '/chown mailpit:mailpit "${MAILPIT_UI_AUTH_FILE}"/d' /usr/local/bin/env-helpers.sh \
-	&& mkdir -p /home/container/appdata /run/penpot-aio \
-	&& chmod -R a+rwX /opt/penpot /var/www/app /etc/nginx /run/penpot-aio
+	&& chmod -R a+rX /opt/penpot /var/www/app /etc/nginx \
+	&& mkdir -p /opt/penpot-aio/templates \
+	&& cp /tmp/nginx.conf.template /tmp/resolvers.conf.template /opt/penpot-aio/templates/ \
+	&& mv /var/www/app/js/config.js /var/www/app/js/config.js.orig \
+	&& ln -s /tmp/penpot/config.js /var/www/app/js/config.js \
+	&& mkdir -p /home/container/appdata /tmp/penpot
 
 ENV PENPOT_PUBLIC_URI=http://178.63.206.185:3555
 ENV PENPOT_FLAGS="disable-email-verification enable-smtp disable-secure-session-cookies"

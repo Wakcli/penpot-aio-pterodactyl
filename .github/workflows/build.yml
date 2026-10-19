@@ -28,5 +28,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/wakcli/penpot-pterodactyl:2.16.0
+            ghcr.io/wakcli/penpot-pterodactyl:2.16.0-ro1
             ghcr.io/wakcli/penpot-pterodactyl:latest
