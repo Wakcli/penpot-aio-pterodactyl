@@ -28,10 +28,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/wakcli/penpot-aio-pterodactyl:2.16.0
-            ghcr.io/wakcli/penpot-aio-pterodactyl:latest
-
-      - name: make package public
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api --method PATCH /user/packages/container/penpot-aio-pterodactyl -f visibility=public
+            ghcr.io/wakcli/penpot-pterodactyl:2.16.0
+            ghcr.io/wakcli/penpot-pterodactyl:latest
