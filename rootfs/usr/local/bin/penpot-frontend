@@ -91,4 +91,6 @@ PY
 sed -i "s/listen 8080 /listen ${SERVER_PORT} /" /tmp/penpot/nginx.conf
 sed -i "s/worker_processes auto;/worker_processes 2;/" /tmp/penpot/nginx.conf
 
+echo "change this part"
+
 exec nginx -c /tmp/penpot/nginx.conf -g "daemon off;"
