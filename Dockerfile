@@ -3,7 +3,8 @@ FROM jsonbored/penpot-aio:2.16.0-aio.3
 USER root
 
 RUN apt-get update \
-	&& apt-get install -y --no-install-recommends supervisor libnss-wrapper \
+	&& apt-get install -y --no-install-recommends \
+		supervisor libnss-wrapper fontforge woff-tools woff2 \
 	&& rm -rf /var/lib/apt/lists/*
 
 COPY rootfs/ /
